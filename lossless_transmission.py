@@ -108,7 +108,6 @@ for _ in range(10):
 
     # Loop over the model
     while len(fifo) > 0:
-        print('.', end='')
 
         # Retrieve the first element of the fifo
         gate = fifo.pop(0)
@@ -121,9 +120,12 @@ for _ in range(10):
 
         # conquered or null
         if faces_status.get(gate) is not None:
+            print('*', end='')
             continue
 
         elif valences[front] <= 6 and vertices_status.get(front) is None:
+            print('.', end='')
+
             # Retrieve the border of the patch
             chain = patches[front]
 
@@ -141,6 +143,11 @@ for _ in range(10):
 
             # Remove the front vertex
             active_vertices.remove(front)
+
+            # Remove the old gates
+            for vertex in chain:
+                gates.pop((front, vertex))
+                gates.pop((vertex, front))
 
             # Retrieve the information to start the retriangulation
             valence = valences[front]
@@ -184,6 +191,10 @@ for _ in range(10):
                     gates[(chain[1], chain[2])] = left
                     gates[(chain[2], left)] = chain[1]
 
+                    # Add the new gates
+                    gates[(left, chain[1])] = chain[2]
+                    gates[(chain[1], left)] = right
+
                     # Update the valences
                     valences[right] -= 1
                     valences[chain[2]] -= 1
@@ -206,6 +217,10 @@ for _ in range(10):
                     gates[(right, chain[1])] = chain[2]
                     gates[(chain[1], chain[2])] = right
                     gates[(chain[2], left)] = right
+
+                    # Add the new gates
+                    gates[(right, chain[2])] = left
+                    gates[(chain[2], right)] = chain[1]
 
                     # Update the valences
                     valences[left] -= 1
@@ -233,6 +248,12 @@ for _ in range(10):
                     gates[(chain[1], chain[2])] = chain[3]
                     gates[(chain[2], chain[3])] = chain[1]
                     gates[(chain[3], left)] = chain[1]
+
+                    # Add the new gates
+                    gates[(left, chain[1])] = chain[3]
+                    gates[(chain[1], left)] = right
+                    gates[(chain[3], chain[1])] = chain[2]
+                    gates[(chain[1], chain[3])] = left
 
                     # Update the valences
                     valences[right] -= 1
@@ -267,6 +288,12 @@ for _ in range(10):
                     gates[(chain[2], chain[3])] = chain[1]
                     gates[(chain[3], left)] = right
 
+                    # Add the new gates
+                    gates[(right, chain[3])] = left
+                    gates[(chain[3], right)] = chain[1]
+                    gates[(chain[3], chain[1])] = chain[2]
+                    gates[(chain[1], chain[3])] = right
+
                     # Update the valences
                     valences[chain[2]] -= 1
                     valences[chain[3]] += 1
@@ -300,6 +327,12 @@ for _ in range(10):
                     gates[(chain[2], chain[3])] = left
                     gates[(chain[3], left)] = chain[2]
 
+                    # Add the new gates
+                    gates[(right, chain[2])] = left
+                    gates[(chain[2], right)] = chain[1]
+                    gates[(chain[2], left)] = right
+                    gates[(left, chain[2])] = chain[3]
+
                     # Update the valences
                     valences[chain[1]] -= 1
                     valences[chain[2]] += 1
@@ -318,6 +351,7 @@ for _ in range(10):
                     patches[left][np.where(patches[left] == front)[0]] = chain[2]
 
             elif valence == 6:
+
                 if right_sign == '-':
                     # Update the signs
                     if plus_minus.get(chain[1]) is None:
@@ -336,7 +370,14 @@ for _ in range(10):
                     gates[(chain[2], chain[3])] = chain[1]
                     gates[(chain[3], chain[4])] = left
                     gates[(chain[4], left)] = chain[3]
-                    # TODO: add the new face with all its gates
+
+                    # Add the new gates
+                    gates[(left, chain[1])] = chain[3]
+                    gates[(chain[1], left)] = right
+                    gates[(chain[3], chain[1])] = chain[2]
+                    gates[(chain[1], chain[3])] = left
+                    gates[(left, chain[3])] = chain[4]
+                    gates[(chain[3], left)] = chain[1]
 
                     # Update the valences
                     valences[right] -= 1
@@ -386,7 +427,14 @@ for _ in range(10):
                     gates[(chain[2], chain[3])] = chain[4]
                     gates[(chain[3], chain[4])] = chain[2]
                     gates[(chain[4], left)] = right
-                    # TODO: add the new face with all its gates
+
+                    # Add the new gates
+                    gates[(right, chain[4])] = left
+                    gates[(chain[4], right)] = chain[2]
+                    gates[(chain[4], chain[2])] = chain[3]
+                    gates[(chain[2], chain[4])] = right
+                    gates[(right, chain[2])] = chain[4]
+                    gates[(chain[2], right)] = chain[1]
 
                     # Update the valences
                     valences[right] += 1
@@ -420,8 +468,14 @@ for _ in range(10):
 
         elif (vertices_status.get(front) is None and valences[front] > 6) or (
                 vertices_status.get(front) == 'conquered'):
+            print('o', end='')
+
             # Set the front face to null
             faces_status[gate] = 'null'
+
+            # TODO: check if it's the right behavior
+            plus_minus[front] = '+'
+
             # Add the other edges to the fifo
             fifo.append((front, right))
             fifo.append((left, front))
