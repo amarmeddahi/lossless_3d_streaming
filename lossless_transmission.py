@@ -30,7 +30,7 @@ with open(OBJ_PATH) as file:
             current_vertex += 1
 
         # Case of a face
-        else:
+        elif line[0] == 'f':
             # The indices of the face vertices
             a, b, c = line.split(' ')[1:]
             a, b, c = int(a), int(b), int(c)
