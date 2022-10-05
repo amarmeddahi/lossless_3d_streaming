@@ -2,7 +2,7 @@
 """
 CSI Project.
 
-@author: Pierre Barroso
+@author: Pierre Barroso + Fabio
 """
 import random
 import numpy as np
