@@ -7,7 +7,7 @@ CSI Project.
 import random
 import numpy as np
 
-OBJ_PATH = './OBJ/cow.obj'
+OBJ_PATH = './OBJ/sphere.obj'
 
 faces = []
 vertices = []
