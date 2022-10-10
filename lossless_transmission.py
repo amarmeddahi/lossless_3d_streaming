@@ -6,90 +6,17 @@ CSI Project.
 """
 import random
 import numpy as np
+from functions import *
+import sys
 
-OBJ_PATH = './OBJ/icosphere.obj'
 
-faces = []
-vertices = []
-gates = {}
-valences = {}
-patches = {}
-active_vertices = set()
-
-# Retrieve the data from the obj file
-with open(OBJ_PATH) as file:
-    current_vertex = 1
-    # Loop over the lines of the obj file
-    for line in file:
-        # Case of a vertex
-        if line[0] == 'v':
-            # Store the coordinates x, y, z
-            x, y, z = line.split(' ')[1:]
-            vertices.append([float(x), float(y), float(z)])
-            active_vertices.add(current_vertex)
-            current_vertex += 1
-
-        # Case of a face
-        elif line[0] == 'f':
-            # The indices of the face vertices
-            a, b, c = line.split(' ')[1:]
-            a, b, c = int(a), int(b), int(c)
-            faces.append([a, b, c])
-
-            # Add the different gates
-            gates[(a, b)] = c
-            gates[(b, c)] = a
-            gates[(c, a)] = b
-
-            # Update the valences
-            if valences.get(a) is None:
-                valences[a] = 1
-            else:
-                valences[a] += 1
-
-            if valences.get(b) is None:
-                valences[b] = 1
-            else:
-                valences[b] += 1
-
-            if valences.get(c) is None:
-                valences[c] = 1
-            else:
-                valences[c] += 1
-
-            # Add the patches
-            if patches.get(a) is None:
-                patches[a] = [(b, c)]
-            else:
-                patches[a].append((b, c))
-
-            if patches.get(b) is None:
-                patches[b] = [(c, a)]
-            else:
-                patches[b].append((c, a))
-
-            if patches.get(c) is None:
-                patches[c] = [(a, b)]
-            else:
-                patches[c].append((a, b))
-
-# Order the edges in the patches
-for vertex, edges in patches.items():
-    start, end = edges.pop(0)
-    chained_list = [start, end]
-
-    while len(edges) > 1:
-        for edge in edges:
-            if edge[0] == end:
-                end = edge[1]
-                chained_list.append(end)
-                break
-        edges.remove(edge)
-
-    patches[vertex] = np.array(chained_list)
+OBJ_PATH = sys.argv[1]
+NB_ITERATIONS = sys.argv[2]
+# Preprocessing
+gates, valences, patches, active_vertices = preprocessing(OBJ_PATH)
 
 # Repeat the 3 steps of the algorithm
-for _ in range(10):
+for _ in range(NB_ITERATIONS):
 
     print(len(active_vertices))
 
