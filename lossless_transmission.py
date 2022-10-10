@@ -7,7 +7,7 @@ CSI Project.
 import random
 import numpy as np
 
-OBJ_PATH = './OBJ/sphere.obj'
+OBJ_PATH = './OBJ/icosphere.obj'
 
 faces = []
 vertices = []
@@ -137,11 +137,15 @@ for _ in range(10):
             # and tag the inner faces as conquered
             i = np.where(chain == right)[0][0]
             chain = np.append(chain[i:], chain[:i])
+            print(chain)
             for gate in zip(chain[1:], chain[:-1]):
+                print(gate)
                 fifo.append(gate)
                 faces_status[(gate[-1], gate[0])] = 'conquered'
+            print("stop")
 
             # Remove the front vertex
+            print(front)
             active_vertices.remove(front)
 
             # Remove the old gates
