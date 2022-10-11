@@ -6,18 +6,18 @@ CSI Project.
 """
 import random
 import numpy as np
-from functions import *
+from functions import preprocessing, write_obj
 import sys
 
 
 OBJ_PATH = sys.argv[1]
-NB_ITERATIONS = sys.argv[2]
+NB_ITERATIONS = int(sys.argv[2])
 # Preprocessing
-gates, valences, patches, active_vertices = preprocessing(OBJ_PATH)
+gates, valences, patches, active_vertices, vertices = preprocessing(OBJ_PATH)
 
 # Repeat the 3 steps of the algorithm
-for _ in range(NB_ITERATIONS):
-
+for current_it in range(NB_ITERATIONS):
+    print('')
     print(len(active_vertices))
 
     faces_status = {}
@@ -64,15 +64,15 @@ for _ in range(NB_ITERATIONS):
             # and tag the inner faces as conquered
             i = np.where(chain == right)[0][0]
             chain = np.append(chain[i:], chain[:i])
-            print(chain)
+            # print(chain)
             for gate in zip(chain[1:], chain[:-1]):
-                print(gate)
+                # print(gate)
                 fifo.append(gate)
                 faces_status[(gate[-1], gate[0])] = 'conquered'
-            print("stop")
+            # print("stop")
 
             # Remove the front vertex
-            print(front)
+            # print(front)
             active_vertices.remove(front)
 
             # Remove the old gates
@@ -404,9 +404,32 @@ for _ in range(NB_ITERATIONS):
             # Set the front face to null
             faces_status[gate] = 'null'
 
-            # TODO: check if it's the right behavior
-            plus_minus[front] = '+'
+            if plus_minus.get(front) is None:
+                plus_minus[front] = '+'
 
             # Add the other edges to the fifo
             fifo.append((front, right))
             fifo.append((left, front))
+
+    # Cleaning Conquest
+    for vertex in active_vertices.copy():
+        if valences[vertex] == 3:
+            # Remove the vertex
+            active_vertices.remove(vertex)
+
+            # Update the valences
+            chain = patches[vertex]
+            for point in chain:
+                valences[point] -= 1
+
+            # Update the faces
+            gates[(chain[0], chain[1])] = chain[2]
+            gates[(chain[1], chain[2])] = chain[0]
+            gates[(chain[2], chain[0])] = chain[1]
+
+            # Update the patches
+            for point in chain:
+                patches[point] = patches[point][patches[point] != vertex]
+
+    path = '{}_{}.obj'.format(OBJ_PATH.split('.obj')[0], current_it)
+    write_obj(path, active_vertices, gates, vertices)

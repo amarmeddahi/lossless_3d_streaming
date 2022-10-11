@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import random
 
@@ -82,7 +81,7 @@ def preprocessing(obj_path):
 
         patches[vertex] = np.array(chained_list)
 
-    return gates, valences, patches, active_vertices
+    return gates, valences, patches, active_vertices, vertices
 
 def decimating_conquest(gates, valences, patches, active_vertices):
 
@@ -110,4 +109,25 @@ def decimating_conquest(gates, valences, patches, active_vertices):
 
     return
 
-def retriangulation()
+# def retriangulation()
+
+def write_obj(path, active_vertices, gates, vertices):
+    new_indices = {}
+    local_copy = gates.copy()
+    with open(path, 'w') as file:
+        for k, vertex in enumerate(active_vertices):
+            x, y, z = vertices[vertex-1]
+            file.write('v {} {} {}\n'.format(x, y, z))
+            new_indices[vertex] = k + 1
+
+        for gate in gates.copy():
+            left, right = gate
+            try:
+                front = local_copy[gate]
+                local_copy.pop(gate)
+                local_copy.pop((right, front))
+                local_copy.pop((front, left))
+                file.write('f {} {} {}\n'.format(
+                    new_indices[left], new_indices[right], new_indices[front]))
+            except KeyError:
+                continue
