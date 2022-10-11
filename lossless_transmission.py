@@ -421,6 +421,9 @@ for current_it in range(NB_ITERATIONS):
             chain = patches[vertex]
             for point in chain:
                 valences[point] -= 1
+                # Remove the old gates
+                gates.pop((vertex, point))
+                gates.pop((point, vertex))
 
             # Update the faces
             gates[(chain[0], chain[1])] = chain[2]
