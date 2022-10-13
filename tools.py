@@ -490,6 +490,97 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[left] = patches[left][patches[left] != front]
     return valences, patches, gates
 
+def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
+    # Cleaning Conquest
+    faces_status = {}
+    vertices_status = {}
+    done = set()
+    
+    # Choose a random gate
+    first_gate = random.choice(list(gates.keys()))
+
+    # Create the fifo
+    fifo.append(first_gate)
+
+    # Loop over the model
+    while len(fifo) > 0:
+        # Retrieve the first element of the fifo
+        gate = fifo.pop(0)
+        if gate in done:
+            continue
+        else:
+            done.add(gate)
+
+        # Retrieve the front vertex
+        front = gates[gate]
+        chain = patches[front]
+        left, right = gate
+
+        # conquered or null
+        if faces_status.get(gate) is not None:
+            print('*', end='')
+            continue
+
+        elif valences[front] == 3 and vertices_status.get(front) is None:
+            print('.', end='')
+
+           # Remove the vertex
+            active_vertices.remove(front)
+            
+            for left,right in fifo.copy():
+                if left == front or right == front:
+                    fifo.remove((left,right))
+
+            # Update the valences
+            for point in chain:
+                valences[point] -= 1
+                # Remove the old gates
+                gates.pop((front, point))
+                gates.pop((point, front))
+
+            # Update the faces
+            gates[(chain[0], chain[1])] = chain[2]
+            gates[(chain[1], chain[2])] = chain[0]
+            gates[(chain[2], chain[0])] = chain[1]
+
+            # Update the patches
+            for point in chain:
+                patches[point] = patches[point][patches[point] != front]
+                vertices_status[point] = 'conquered'
+
+            # Update face status        
+            faces_status[(chain[1],chain[0])] = 'conquered'
+            faces_status[(chain[2],chain[1])] = 'conquered'
+
+            # Update fifo
+            front_1 = gates[(chain[1],chain[0])]
+            front_2 = gates[(chain[2],chain[1])]
+            fifo.append((front_1, chain[0]))
+            fifo.append((chain[1], front_1))
+            fifo.append((front_2, chain[1]))
+            fifo.append((chain[2], front_2))
+                
+
+        elif valences[front] <= 6:
+            print("-", end='')
+            i = np.where(chain == right)[0][0]
+            chain = np.append(chain[i:], chain[:i])
+            # print(chain)
+            for gate in zip(chain[1:], chain[:-1]):
+                # print(gate)
+                fifo.append(gate)
+                faces_status[(gate[-1], gate[0])] = 'conquered'
+
+        elif valences[front] > 6:
+            print('o', end='')
+
+            # Set the front face to null
+            faces_status[gate] = 'null'
+
+            # Add the other edges to the fifo
+            fifo.append((front, right))
+            fifo.append((left, front))
+
 def write_obj(path, active_vertices, gates, vertices):
     new_indices = {}
     local_copy = gates.copy()
