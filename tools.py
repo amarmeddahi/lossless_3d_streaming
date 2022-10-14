@@ -497,7 +497,14 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
     done = set()
     
     # Choose a random gate
-    first_gate = random.choice(list(gates.keys()))
+    for vertex in active_vertices:
+        if valences[vertex] == 3:
+            chain = patches[vertex]
+            break
+    else:
+        return
+            
+    first_gate = (chain[0],chain[1])
 
     # Create the fifo
     fifo.append(first_gate)
@@ -561,7 +568,7 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
             fifo.append((chain[2], front_2))
                 
 
-        elif valences[front] <= 6:
+        elif valences[front] <= 6 and vertices_status.get(front) is None:
             print("-", end='')
             i = np.where(chain == right)[0][0]
             chain = np.append(chain[i:], chain[:i])
@@ -571,7 +578,8 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
                 fifo.append(gate)
                 faces_status[(gate[-1], gate[0])] = 'conquered'
 
-        elif valences[front] > 6:
+        elif (vertices_status.get(front) is None and valences[front] > 6) or (
+                vertices_status.get(front) == 'conquered'):
             print('o', end='')
 
             # Set the front face to null
@@ -601,3 +609,41 @@ def write_obj(path, active_vertices, gates, vertices):
                     new_indices[left], new_indices[right], new_indices[front]))
             except KeyError:
                 continue
+
+
+def sew_conquest(gates, patches, active_vertices):
+    L = {}
+    for gate, front in gates.copy().items():
+        left,right = gate
+        if gates.get((right,left)) is  None:
+            if L.get(left) is None:
+                L[left] = [right]
+            else:
+                L[left].append(right)
+            if L.get(right) is None:
+                L[right] = [left]
+            else:
+                L[right].append(left)
+            
+        elif front == gates[(right,left)] and valences[front] == 2:
+            active_vertices.remove(front)
+            
+            #update gates
+            gates.remove((right,left))
+            gates.remove((left, right))
+            gates.remove((right,front))
+            gates.remove((left, front))
+            gates.remove((front,right))
+            gates.remove((front,left)) 
+            
+            #update patches
+            patches[right][np.where(patches[right] == front)[0]] = left
+            patches[left][np.where(patches[left] == front)[0]] = right
+
+    
+    
+            
+                    
+            
+            
+            
