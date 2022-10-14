@@ -10,8 +10,8 @@ from tools import *
 import sys
 
 
-OBJ_PATH = sys.argv[1]
-NB_ITERATIONS = int(sys.argv[2])
+OBJ_PATH = './OBJ/icosphere.obj'
+NB_ITERATIONS = 2
 # Preprocessing
 gates, valences, patches, active_vertices, vertices = preprocessing(OBJ_PATH)
 
@@ -21,11 +21,12 @@ for current_it in range(NB_ITERATIONS):
     print(len(active_vertices))
 
     # decimating conquest + retriangulation
-    valences, patches, gates = decimating_conquest(gates, valences, patches, active_vertices)
+    valences, patches, gates = decimating_conquest(gates, valences, patches, active_vertices, current_it)
 
     # Cleaning Conquest
     fifo = []
     cleaning_conquest(gates, patches, valences, active_vertices, fifo)
+    sew_conquest(gates, patches, active_vertices, valences)
 
     path = '{}_{}.obj'.format(OBJ_PATH.split('.obj')[0], current_it)
     write_obj(path, active_vertices, gates, vertices)

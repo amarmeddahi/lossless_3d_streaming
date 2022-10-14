@@ -85,14 +85,21 @@ def preprocessing(obj_path):
 
     return gates, valences, patches, active_vertices, vertices
 
-def decimating_conquest(gates, valences, patches, active_vertices):
+def decimating_conquest(gates, valences, patches, active_vertices, it):
 
     faces_status = {}
     vertices_status = {}
     plus_minus = {}
 
     # Choose a random gate
-    first_gate = random.choice(list(gates.keys()))
+    if it == 0:
+        first_gate = (158, 159)
+    elif it == 1:
+        first_gate = (152, 149)
+    elif it == 2:
+        first_gate = (34, 38)
+    else:
+        first_gate = random.choice(list(gates.keys()))
     left, right = first_gate
     plus_minus[left] = '-'
     plus_minus[right] = '+'
@@ -611,39 +618,39 @@ def write_obj(path, active_vertices, gates, vertices):
                 continue
 
 
-def sew_conquest(gates, patches, active_vertices):
-    L = {}
+def sew_conquest(gates, patches, active_vertices, valences):
+    to_sew = {}
+    recto_verso = []
     for gate, front in gates.copy().items():
-        left,right = gate
-        if gates.get((right,left)) is  None:
-            if L.get(left) is None:
-                L[left] = [right]
-            else:
-                L[left].append(right)
-            if L.get(right) is None:
-                L[right] = [left]
-            else:
-                L[right].append(left)
+        left, right = gate
+        if gates.get((right,left)) is None:
+            print('!!!!!!!!!!')
+            to_sew[right] = left
             
         elif front == gates[(right,left)] and valences[front] == 2:
-            active_vertices.remove(front)
-            
-            #update gates
-            gates.remove((right,left))
-            gates.remove((left, right))
-            gates.remove((right,front))
-            gates.remove((left, front))
-            gates.remove((front,right))
-            gates.remove((front,left)) 
-            
-            #update patches
-            patches[right][np.where(patches[right] == front)[0]] = left
-            patches[left][np.where(patches[left] == front)[0]] = right
+            print('cvocouucouc')
+            try:
+                active_vertices.remove(front)
 
+                #update gates
+                gates.remove((right,left))
+                gates.remove((left, right))
+                gates.remove((right,front))
+                gates.remove((left, front))
+                gates.remove((front,right))
+                gates.remove((front,left)) 
+                
+                #update patches
+                patches[right] = patches[right][patches[right] != front]
+                patches[left] = patches[left][patches[left] != front]
+                
+                recto_verso.append(gate)
+                recto_verso.append((right, left))
+            except KeyError:
+                continue
     
-    
-            
-                    
-            
-            
-            
+    for left, right in recto_verso:
+        print('\t!!!\t')
+        gates[(right, to_sew[right])] = left
+        gates[(to_sew[right], left)] = right
+        gates[(left, right)] = to_sew[right]
