@@ -139,15 +139,11 @@ def decimating_conquest(gates, valences, patches, active_vertices, it):
             # and tag the inner faces as conquered
             i = np.where(chain == right)[0][0]
             chain = np.append(chain[i:], chain[:i])
-            # print(chain)
             for gate in zip(chain[1:], chain[:-1]):
-                # print(gate)
                 fifo.append(gate)
                 faces_status[(gate[-1], gate[0])] = 'conquered'
-            # print("stop")
 
             # Remove the front vertex
-            # print(front)
             active_vertices.remove(front)
 
             # Remove the old gates
@@ -579,9 +575,7 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
             print("-", end='')
             i = np.where(chain == right)[0][0]
             chain = np.append(chain[i:], chain[:i])
-            # print(chain)
             for gate in zip(chain[1:], chain[:-1]):
-                # print(gate)
                 fifo.append(gate)
                 faces_status[(gate[-1], gate[0])] = 'conquered'
 
@@ -610,8 +604,18 @@ def write_obj(path, active_vertices, gates, vertices):
             try:
                 front = local_copy[gate]
                 local_copy.pop(gate)
-                local_copy.pop((right, front))
-                local_copy.pop((front, left))
+                if local_copy[(right, front)] == left:
+                    local_copy.pop((right, front))
+                else:
+                    print('\t\t WTF \t\t')
+                    print('face: {}-{}-{}, th: {}, found: {}'.format(
+                        right, front, left, left, local_copy[(right, front)]))
+                if local_copy[(front, left)] == right:
+                    local_copy.pop((front, left))
+                else:
+                    print('\t\t WTF \t\t')
+                    print('f: {}-{}-{}, th: {}, found: {}'.format(
+                        front, left, right, right, local_copy[(front, left)]))
                 file.write('f {} {} {}\n'.format(
                     new_indices[left], new_indices[right], new_indices[front]))
             except KeyError:
@@ -619,38 +623,30 @@ def write_obj(path, active_vertices, gates, vertices):
 
 
 def sew_conquest(gates, patches, active_vertices, valences):
-    to_sew = {}
-    recto_verso = []
-    for gate, front in gates.copy().items():
-        left, right = gate
-        if gates.get((right,left)) is None:
-            print('!!!!!!!!!!')
-            to_sew[right] = left
+    for vertex in active_vertices.copy():
+        if valences[vertex] == 2:
+            active_vertices.remove(vertex)
             
-        elif front == gates[(right,left)] and valences[front] == 2:
-            print('cvocouucouc')
-            try:
-                active_vertices.remove(front)
-
-                #update gates
-                gates.remove((right,left))
-                gates.remove((left, right))
-                gates.remove((right,front))
-                gates.remove((left, front))
-                gates.remove((front,right))
-                gates.remove((front,left)) 
-                
-                #update patches
-                patches[right] = patches[right][patches[right] != front]
-                patches[left] = patches[left][patches[left] != front]
-                
-                recto_verso.append(gate)
-                recto_verso.append((right, left))
-            except KeyError:
-                continue
-    
-    for left, right in recto_verso:
-        print('\t!!!\t')
-        gates[(right, to_sew[right])] = left
-        gates[(to_sew[right], left)] = right
-        gates[(left, right)] = to_sew[right]
+            chain = patches[vertex]
+            gates.pop((chain[0], vertex))
+            gates.pop((chain[1], vertex))
+            gates.pop((vertex, chain[0]))
+            gates.pop((vertex, chain[1]))
+            
+            patch = patches[chain[0]]
+            stop = np.where(patch == vertex)[0]
+            patches[chain[0]] = patch[np.r_[0:stop, stop+2:len(patch)]]
+            valences[chain[0]] -= 2
+            
+            patch = patches[chain[1]]
+            stop = np.where(patch == vertex)[0]
+            patches[chain[1]] = patch[np.r_[0:stop, stop+2:len(patch)]]
+            valences[chain[1]] -= 2
+            
+            patch = patches[chain[0]]
+            k = np.where(patch == chain[1])[0][0]
+            gates[(chain[1], chain[0])] = int(patch[k-1])
+            
+            patch = patches[chain[1]]
+            k = np.where(patch == chain[0])[0][0]
+            gates[(chain[0], chain[1])] = int(patch[k-1])

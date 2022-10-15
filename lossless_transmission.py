@@ -11,7 +11,7 @@ import sys
 
 
 OBJ_PATH = './OBJ/icosphere.obj'
-NB_ITERATIONS = 2
+NB_ITERATIONS = 6
 # Preprocessing
 gates, valences, patches, active_vertices, vertices = preprocessing(OBJ_PATH)
 
@@ -21,7 +21,8 @@ for current_it in range(NB_ITERATIONS):
     print(len(active_vertices))
 
     # decimating conquest + retriangulation
-    valences, patches, gates = decimating_conquest(gates, valences, patches, active_vertices, current_it)
+    valences, patches, gates = decimating_conquest(
+        gates, valences, patches, active_vertices, current_it)
 
     # Cleaning Conquest
     fifo = []
