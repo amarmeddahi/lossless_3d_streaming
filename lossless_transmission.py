@@ -22,7 +22,7 @@ for current_it in range(NB_ITERATIONS):
 
     # decimating conquest + retriangulation
     valences, patches, gates = decimating_conquest(
-        gates, valences, patches, active_vertices, current_it)
+        gates, valences, patches, active_vertices, -1)
 
     # Cleaning Conquest
     fifo = []
@@ -31,3 +31,6 @@ for current_it in range(NB_ITERATIONS):
 
     path = '{}_{}.obj'.format(OBJ_PATH.split('.obj')[0], current_it)
     write_obj(path, active_vertices, gates, vertices)
+
+print('\n')
+print('Final vertices: {}'.format(len(active_vertices)))

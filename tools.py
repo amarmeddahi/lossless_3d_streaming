@@ -634,19 +634,29 @@ def sew_conquest(gates, patches, active_vertices, valences):
             gates.pop((vertex, chain[1]))
             
             patch = patches[chain[0]]
-            stop = np.where(patch == vertex)[0]
-            patches[chain[0]] = patch[np.r_[0:stop, stop+2:len(patch)]]
+            patches[chain[0]] = patch[patch != vertex]
+            patch = patches[chain[0]]
+            k = np.where(patch == chain[1])[0][0]
+            patches[chain[0]] = patch[np.r_[0:k, k+1:len(patch)]]
             valences[chain[0]] -= 2
             
+            patch = patches[chain[1]]            
+            patches[chain[1]] = patch[patch != vertex]
             patch = patches[chain[1]]
-            stop = np.where(patch == vertex)[0]
-            patches[chain[1]] = patch[np.r_[0:stop, stop+2:len(patch)]]
+            k = np.where(patch == chain[0])[0][0]
+            patches[chain[1]] = patch[np.r_[0:k, k+1:len(patch)]]
             valences[chain[1]] -= 2
             
             patch = patches[chain[0]]
-            k = np.where(patch == chain[1])[0][0]
+            k = np.where(patch == chain[1])[0]
+            if len(k) > 1:
+                print(patch)
+                k = k[0]
             gates[(chain[1], chain[0])] = int(patch[k-1])
             
             patch = patches[chain[1]]
-            k = np.where(patch == chain[0])[0][0]
+            k = np.where(patch == chain[0])[0]
+            if len(k) > 1:
+                print(patch)
+                k = k[0]
             gates[(chain[0], chain[1])] = int(patch[k-1])
