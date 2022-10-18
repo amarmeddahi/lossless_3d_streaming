@@ -683,7 +683,7 @@ def write_obj(path, active_vertices, gates, vertices):
             except KeyError:
                 continue
 
-def sew_conquest(gates, patches, active_vertices, valences):
+def sew_conquest(gates, patches, active_vertices, valences, vertices):
     for vertex in active_vertices.copy():
         if valences[vertex] == 2:
             try:
@@ -724,3 +724,20 @@ def sew_conquest(gates, patches, active_vertices, valences):
                 gates[(chain[0], chain[1])] = int(patch[k-1])
             except KeyError:
                 continue
+
+    to_duplicate = {}
+    for front, chain in patches.items():
+        if len(set(chain)) != len(chain):
+            copy = chain.copy()
+            copy.sort()
+            to_duplicate[front] = copy[np.where(np.diff(copy) == 0)[0]][0]
+    while len(to_duplicate) > 0:
+        left, right = to_duplicate.popitem()
+        to_duplicate.pop(right)
+
+        vertices.append(vertices[left-1])
+        new_left = len(vertices)
+        vertices.append(vertices[right-1])
+        new_right = new_left + 1
+
+        # TODO: do something to treat the shared edges
