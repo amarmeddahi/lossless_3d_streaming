@@ -10,10 +10,10 @@ def preprocessing(obj_path):
     valences = {}
     patches = {}
     active_vertices = set()
-    
+    current_vertex = 1
+
     # Retrieve the data from the obj file
     with open(obj_path) as file:
-        current_vertex = 1
         # Loop over the lines of the obj file
         for line in file:
             # Case of a vertex
@@ -68,8 +68,9 @@ def preprocessing(obj_path):
                 else:
                     patches[c].append((a, b))
 
+    to_edit = {}
     # Order the edges in the patches
-    for vertex, edges in patches.items():
+    for vertex, edges in patches.copy().items():
         start, end = edges.pop(0)
         chained_list = [start, end]
 
@@ -79,9 +80,57 @@ def preprocessing(obj_path):
                     end = edge[1]
                     chained_list.append(end)
                     break
+            else:
+                # Go out the while
+                break
             edges.remove(edge)
 
+        if len(edges) > 1:
+            if chained_list[0] == chained_list[-1]:
+                chained_list.pop()
+
+            # Add a new point
+            vertices.append(vertices[vertex-1])
+            active_vertices.add(current_vertex)
+
+            # Modify the gates
+            for gate in edges:
+                gates[gate] = current_vertex
+
+            # Modify the valences
+            valences[vertex] -= len(edges)
+            valences[current_vertex] = len(edges)
+
+            start, end = edges.pop(0)
+            new_chain = [start, end]
+            while len(edges) > 1:
+                for edge in edges:
+                    if edge[0] == end:
+                        end = edge[1]
+                        new_chain.append(end)
+                        break
+                edges.remove(edge)
+
+            # Add the new patch
+            patches[current_vertex] = np.array(new_chain)
+
+            # Replace the interior gates
+            for point in new_chain:
+                gates[(point, current_vertex)] = gates.pop((point, vertex))
+                gates[(current_vertex, point)] = gates.pop((vertex, point))
+
+            to_edit[vertex] = (new_chain, current_vertex)
+
+            current_vertex += 1
+            print('Multiple chains detected: {} -> {} & {}'.format(
+                vertex, chained_list, new_chain))
+
         patches[vertex] = np.array(chained_list)
+
+    # Update the patches
+    for vertex, (chain, new) in to_edit.items():
+        for point in chain:
+            patches[point][np.where(patches[point] == vertex)[0]] = new
 
     return gates, valences, patches, active_vertices, vertices
 
@@ -201,7 +250,7 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
                 plus_minus[new_front] = '-'
             else:
                 plus_minus[new_front] = '+'
-                
+
 
     elif valence == 4:
         if right_sign == '-':
@@ -416,24 +465,28 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             # Update the patches
             patches[right] = patches[right][patches[right] != front]
 
-            patch = patches[chain[1]]
-            i = np.where(patch == front)[0][0]
-            patch = patch[patch != front]
-            patches[chain[1]] = np.insert(patch, [i, i], [chain[3], left])
+            try:
+                patch = patches[chain[1]]
+                i = np.where(patch == front)[0][0]
+                patch = patch[patch != front]
+                patches[chain[1]] = np.insert(patch, [i, i], [chain[3], left])
 
-            patches[chain[2]] = patches[chain[2]][patches[chain[2]] != front]
+                patches[chain[2]] = patches[chain[2]][patches[chain[2]] != front]
 
-            patch = patches[chain[3]]
-            i = np.where(patch == front)[0][0]
-            patch = patch[patch != front]
-            patches[chain[3]] = np.insert(patch, [i, i], [left, chain[1]])
+                patch = patches[chain[3]]
+                i = np.where(patch == front)[0][0]
+                patch = patch[patch != front]
+                patches[chain[3]] = np.insert(patch, [i, i], [left, chain[1]])
 
-            patches[chain[4]] = patches[chain[4]][patches[chain[4]] != front]
+                patches[chain[4]] = patches[chain[4]][patches[chain[4]] != front]
 
-            patch = patches[left]
-            i = np.where(patch == front)[0][0]
-            patch = patch[patch != front]
-            patches[left] = np.insert(patch, [i, i], [chain[1], chain[3]])
+                patch = patches[left]
+                i = np.where(patch == front)[0][0]
+                patch = patch[patch != front]
+                patches[left] = np.insert(patch, [i, i], [chain[1], chain[3]])
+            except IndexError:
+                print(patch)
+                print(front)
 
         else:
             # Update the signs
@@ -471,26 +524,30 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             valences[left] -= 1
 
             # Update the patches
-            patch = patches[right]
-            i = np.where(patch == front)[0][0]
-            patch = patch[patch != front]
-            patches[right] = np.insert(patch, [i, i], [chain[2], chain[4]])
+            try:
+                patch = patches[right]
+                i = np.where(patch == front)[0][0]
+                patch = patch[patch != front]
+                patches[right] = np.insert(patch, [i, i], [chain[2], chain[4]])
 
-            patches[chain[1]] = patches[chain[1]][patches[chain[1]] != front]
+                patches[chain[1]] = patches[chain[1]][patches[chain[1]] != front]
 
-            patch = patches[chain[2]]
-            i = np.where(patch == front)[0][0]
-            patch = patch[patch != front]
-            patches[chain[2]] = np.insert(patch, [i, i], [chain[4], right])
+                patch = patches[chain[2]]
+                i = np.where(patch == front)[0][0]
+                patch = patch[patch != front]
+                patches[chain[2]] = np.insert(patch, [i, i], [chain[4], right])
 
-            patches[chain[3]] = patches[chain[3]][patches[chain[3]] != front]
+                patches[chain[3]] = patches[chain[3]][patches[chain[3]] != front]
 
-            patch = patches[chain[4]]
-            i = np.where(patch == front)[0][0]
-            patch = patch[patch != front]
-            patches[chain[4]] = np.insert(patch, [i, i], [right, chain[2]])
+                patch = patches[chain[4]]
+                i = np.where(patch == front)[0][0]
+                patch = patch[patch != front]
+                patches[chain[4]] = np.insert(patch, [i, i], [right, chain[2]])
 
-            patches[left] = patches[left][patches[left] != front]
+                patches[left] = patches[left][patches[left] != front]
+            except IndexError:
+                print(patch)
+                print(front)
     return valences, patches, gates
 
 def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
@@ -498,7 +555,7 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
     faces_status = {}
     vertices_status = {}
     done = set()
-    
+
     # Choose a random gate
     for vertex in active_vertices:
         if valences[vertex] == 3:
@@ -506,8 +563,8 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
             break
     else:
         return
-            
-    first_gate = (chain[0],chain[1])
+
+    first_gate = (chain[0], chain[1])
 
     # Create the fifo
     fifo.append(first_gate)
@@ -517,6 +574,7 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
         # Retrieve the first element of the fifo
         gate = fifo.pop(0)
         if gate in done:
+            # print('AAAAAAAAAAAAAAAAAAAAAA')
             continue
         else:
             done.add(gate)
@@ -534,12 +592,12 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
         elif valences[front] == 3 and vertices_status.get(front) is None:
             print('.', end='')
 
-           # Remove the vertex
+            # Remove the vertex
             active_vertices.remove(front)
-            
-            for left,right in fifo.copy():
+
+            for left, right in fifo.copy():
                 if left == front or right == front:
-                    fifo.remove((left,right))
+                    fifo.remove((left, right))
 
             # Update the valences
             for point in chain:
@@ -558,22 +616,26 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
                 patches[point] = patches[point][patches[point] != front]
                 vertices_status[point] = 'conquered'
 
-            # Update face status        
-            faces_status[(chain[1],chain[0])] = 'conquered'
-            faces_status[(chain[2],chain[1])] = 'conquered'
+            # Update face status
+            faces_status[(chain[1], chain[0])] = 'conquered'
+            faces_status[(chain[2], chain[1])] = 'conquered'
 
             # Update fifo
-            front_1 = gates[(chain[1],chain[0])]
-            front_2 = gates[(chain[2],chain[1])]
+            front_1 = gates[(chain[1], chain[0])]
+            front_2 = gates[(chain[2], chain[1])]
             fifo.append((front_1, chain[0]))
             fifo.append((chain[1], front_1))
             fifo.append((front_2, chain[1]))
             fifo.append((chain[2], front_2))
-                
 
         elif valences[front] <= 6 and vertices_status.get(front) is None:
             print("-", end='')
-            i = np.where(chain == right)[0][0]
+            try:
+                i = np.where(chain == right)[0][0]
+            except IndexError:
+                print(chain)
+                print(right)
+                print(front)
             chain = np.append(chain[i:], chain[:i])
             for gate in zip(chain[1:], chain[:-1]):
                 fifo.append(gate)
@@ -621,45 +683,44 @@ def write_obj(path, active_vertices, gates, vertices):
             except KeyError:
                 continue
 
-
 def sew_conquest(gates, patches, active_vertices, valences):
     for vertex in active_vertices.copy():
         if valences[vertex] == 2:
             try:
                 active_vertices.remove(vertex)
-                
+
                 chain = patches[vertex]
                 gates.pop((chain[0], vertex))
                 gates.pop((chain[1], vertex))
                 gates.pop((vertex, chain[0]))
                 gates.pop((vertex, chain[1]))
-                
+
                 patch = patches[chain[0]]
                 patches[chain[0]] = patch[patch != vertex]
                 patch = patches[chain[0]]
                 k = np.where(patch == chain[1])[0][0]
                 patches[chain[0]] = patch[np.r_[0:k, k+1:len(patch)]]
                 valences[chain[0]] -= 2
-                
-                patch = patches[chain[1]]            
+
+                patch = patches[chain[1]]
                 patches[chain[1]] = patch[patch != vertex]
                 patch = patches[chain[1]]
                 k = np.where(patch == chain[0])[0][0]
                 patches[chain[1]] = patch[np.r_[0:k, k+1:len(patch)]]
                 valences[chain[1]] -= 2
-                
+
                 patch = patches[chain[0]]
                 k = np.where(patch == chain[1])[0]
                 if len(k) > 1:
                     print(patch)
                     k = k[0]
                 gates[(chain[1], chain[0])] = int(patch[k-1])
-                
+
                 patch = patches[chain[1]]
                 k = np.where(patch == chain[0])[0]
                 if len(k) > 1:
                     print(patch)
                     k = k[0]
                 gates[(chain[0], chain[1])] = int(patch[k-1])
-            except:
+            except KeyError:
                 continue
