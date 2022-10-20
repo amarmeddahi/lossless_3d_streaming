@@ -132,23 +132,17 @@ def preprocessing(obj_path):
         for point in chain:
             patches[point][np.where(patches[point] == vertex)[0]] = new
 
-    return gates, valences, patches, active_vertices, vertices
+    return gates, valences, patches, active_vertices, vertices, faces
 
-def decimating_conquest(gates, valences, patches, active_vertices, it):
+def decimating_conquest(gates, valences, patches, active_vertices, it, vertices, faces , obja, count_face):
 
     faces_status = {}
     vertices_status = {}
     plus_minus = {}
+    print(obja)
 
     # Choose a random gate
-    if it == 0:
-        first_gate = (158, 159)
-    elif it == 1:
-        first_gate = (152, 149)
-    elif it == 2:
-        first_gate = (34, 38)
-    else:
-        first_gate = random.choice(list(gates.keys()))
+    first_gate = random.choice(list(gates.keys()))
     left, right = first_gate
     plus_minus[left] = '-'
     plus_minus[right] = '+'
@@ -194,6 +188,7 @@ def decimating_conquest(gates, valences, patches, active_vertices, it):
 
             # Remove the front vertex
             active_vertices.remove(front)
+            obja += f"v {vertices[front-1][0]}  {vertices[front-1][1]}  {vertices[front-1][2]} \n"
 
             # Remove the old gates
             for vertex in chain:
@@ -201,7 +196,7 @@ def decimating_conquest(gates, valences, patches, active_vertices, it):
                 gates.pop((vertex, front))
 
             # Retriangulation
-            valences, patches, gates = retriangulation(chain, valences, left, right, gates, patches, front, plus_minus)
+            valences, patches, gates, vertices, faces , obja, count_face = retriangulation(chain, valences, left, right, gates, patches, front, plus_minus, it, vertices, faces , obja, count_face)
 
         elif (vertices_status.get(front) is None and valences[front] > 6) or (
                 vertices_status.get(front) == 'conquered'):
@@ -220,9 +215,9 @@ def decimating_conquest(gates, valences, patches, active_vertices, it):
         else:
             print("ERROR: ELSE (decimating conquest)")
 
-    return valences, patches, gates
+    return obja, count_face
 
-def retriangulation(chain, valences, left, right, gates, patches, front, plus_minus):
+def retriangulation(chain, valences, left, right, gates, patches, front, plus_minus, it, vertices, faces , obja, count_face):
     # Retrieve the information to start the retriangulation
     valence = valences[front]
     left_sign = plus_minus[left]
@@ -250,6 +245,12 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
                 plus_minus[new_front] = '-'
             else:
                 plus_minus[new_front] = '+'
+                
+        # Update obja
+        obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+        obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+        obja += f"f {front}  {chain[2]}  {chain[0]} \n"
+        obja += f"df {chain[0]}  {chain[1]}  {chain[2]} \n"
 
 
     elif valence == 4:
@@ -279,6 +280,14 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[2]] = patches[chain[2]][patches[chain[2]] != front]
             patches[left][np.where(patches[left] == front)[0]] = chain[1]
             patches[chain[1]][np.where(patches[chain[1]] == front)[0]] = left
+            
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[0]} \n"
+            obja += f"df {left}  {chain[1]}  {chain[2]} \n"
+            obja += f"df {left}  {chain[1]}  {right} \n"
 
         else:
             # Update the signs
@@ -306,6 +315,14 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[1]] = patches[chain[1]][patches[chain[1]] != front]
             patches[right][np.where(patches[right] == front)[0]] = chain[2]
             patches[chain[2]][np.where(patches[chain[2]] == front)[0]] = right
+
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[0]} \n"
+            obja += f"df {right}  {chain[2]}  {left} \n"
+            obja += f"df {chain[2]}  {right}  {chain[1]} \n"
 
     elif valence == 5:
         if right_sign == '-':
@@ -347,6 +364,17 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[3]][np.where(patches[chain[3]] == front)[0]] = chain[1]
             patches[left][np.where(patches[left] == front)[0]] = chain[1]
 
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[4]} \n"
+            obja += f"f {front}  {chain[4]}  {chain[0]} \n"
+            obja += f"df {left}  {right}  {chain[1]} \n"
+            obja += f"df {chain[1]}  {left}  {chain[3]} \n"
+            obja += f"df {chain[1]}  {chain[2]}  {chain[3]} \n"
+
+            
         elif left_sign == '-':
             # Update the signs
             if plus_minus.get(chain[1]) is None:
@@ -385,6 +413,16 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[3]] = np.insert(patch, [i, i], [right, chain[1]])
 
             patches[left] = patches[left][patches[left] != front]
+            
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[4]} \n"
+            obja += f"f {front}  {chain[4]}  {chain[0]} \n"
+            obja += f"df {left}  {right}  {chain[3]} \n"
+            obja += f"df {chain[1]}  {right}  {chain[3]} \n"
+            obja += f"df {chain[1]}  {chain[2]}  {chain[3]} \n"
 
         else:
             # Update the signs
@@ -425,6 +463,16 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[3]] = patches[chain[3]][patches[chain[3]] != front]
             patches[left][np.where(patches[left] == front)[0]] = chain[2]
 
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[4]} \n"
+            obja += f"f {front}  {chain[4]}  {chain[0]} \n"
+            obja += f"df {left}  {right}  {chain[2]} \n"
+            obja += f"df {chain[1]}  {right}  {chain[2]} \n"
+            obja += f"df {left}  {chain[2]}  {chain[3]} \n"
+
     elif valence == 6:
 
         if right_sign == '-':
@@ -464,30 +512,35 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
 
             # Update the patches
             patches[right] = patches[right][patches[right] != front]
+            patch = patches[chain[1]]
+            i = np.where(patch == front)[0][0]
+            patch = patch[patch != front]
+            patches[chain[1]] = np.insert(patch, [i, i], [chain[3], left])
 
-            try:
-                patch = patches[chain[1]]
-                i = np.where(patch == front)[0][0]
-                patch = patch[patch != front]
-                patches[chain[1]] = np.insert(patch, [i, i], [chain[3], left])
+            patches[chain[2]] = patches[chain[2]][patches[chain[2]] != front]
 
-                patches[chain[2]] = patches[chain[2]][patches[chain[2]] != front]
+            patch = patches[chain[3]]
+            i = np.where(patch == front)[0][0]
+            patch = patch[patch != front]
+            patches[chain[3]] = np.insert(patch, [i, i], [left, chain[1]])
 
-                patch = patches[chain[3]]
-                i = np.where(patch == front)[0][0]
-                patch = patch[patch != front]
-                patches[chain[3]] = np.insert(patch, [i, i], [left, chain[1]])
+            patches[chain[4]] = patches[chain[4]][patches[chain[4]] != front]
 
-                patches[chain[4]] = patches[chain[4]][patches[chain[4]] != front]
+            patch = patches[left]
+            i = np.where(patch == front)[0][0]
+            patch = patch[patch != front]
+            patches[left] = np.insert(patch, [i, i], [chain[1], chain[3]])
 
-                patch = patches[left]
-                i = np.where(patch == front)[0][0]
-                patch = patch[patch != front]
-                patches[left] = np.insert(patch, [i, i], [chain[1], chain[3]])
-            except IndexError:
-                print(patch)
-                print(front)
-
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[4]} \n"
+            obja += f"f {front}  {chain[4]}  {chain[5]} \n"
+            obja += f"f {front}  {chain[5]}  {chain[0]} \n"
+            obja += f"df {left}  {right}  {chain[1]} \n"
+            obja += f"df {chain[1]}  {left}  {chain[2]} \n"
+            obja += f"df {chain[1]}  {left}  {chain[2]} \n"            
         else:
             # Update the signs
             if plus_minus.get(chain[1]) is None:
@@ -524,33 +577,40 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             valences[left] -= 1
 
             # Update the patches
-            try:
-                patch = patches[right]
-                i = np.where(patch == front)[0][0]
-                patch = patch[patch != front]
-                patches[right] = np.insert(patch, [i, i], [chain[2], chain[4]])
+            patch = patches[right]
+            i = np.where(patch == front)[0][0]
+            patch = patch[patch != front]
+            patches[right] = np.insert(patch, [i, i], [chain[2], chain[4]])
 
-                patches[chain[1]] = patches[chain[1]][patches[chain[1]] != front]
+            patches[chain[1]] = patches[chain[1]][patches[chain[1]] != front]
 
-                patch = patches[chain[2]]
-                i = np.where(patch == front)[0][0]
-                patch = patch[patch != front]
-                patches[chain[2]] = np.insert(patch, [i, i], [chain[4], right])
+            patch = patches[chain[2]]
+            i = np.where(patch == front)[0][0]
+            patch = patch[patch != front]
+            patches[chain[2]] = np.insert(patch, [i, i], [chain[4], right])
 
-                patches[chain[3]] = patches[chain[3]][patches[chain[3]] != front]
+            patches[chain[3]] = patches[chain[3]][patches[chain[3]] != front]
 
-                patch = patches[chain[4]]
-                i = np.where(patch == front)[0][0]
-                patch = patch[patch != front]
-                patches[chain[4]] = np.insert(patch, [i, i], [right, chain[2]])
+            patch = patches[chain[4]]
+            i = np.where(patch == front)[0][0]
+            patch = patch[patch != front]
+            patches[chain[4]] = np.insert(patch, [i, i], [right, chain[2]])
+            patches[left] = patches[left][patches[left] != front]
+            
+            # Update obja
+            obja += f"f {front}  {chain[0]}  {chain[1]} \n"
+            obja += f"f {front}  {chain[1]}  {chain[2]} \n"
+            obja += f"f {front}  {chain[2]}  {chain[3]} \n"
+            obja += f"f {front}  {chain[3]}  {chain[4]} \n"
+            obja += f"f {front}  {chain[4]}  {chain[5]} \n"
+            obja += f"f {front}  {chain[5]}  {chain[0]} \n"
+            obja += f"df {chain[2]}  {right}  {chain[1]} \n"
+            obja += f"df {chain[2]}  {chain[3]}  {chain[4]} \n"
+            obja += f"df {chain[5]}  {left}  {right} \n"  
+          
+    return valences, patches, gates, vertices, faces , obja, count_face
 
-                patches[left] = patches[left][patches[left] != front]
-            except IndexError:
-                print(patch)
-                print(front)
-    return valences, patches, gates
-
-def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
+def cleaning_conquest(gates, patches, valences, active_vertices, fifo, faces , obja, count_face):
     # Cleaning Conquest
     faces_status = {}
     vertices_status = {}
@@ -651,6 +711,7 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo):
             # Add the other edges to the fifo
             fifo.append((front, right))
             fifo.append((left, front))
+    return obja, count_face
 
 def write_obj(path, active_vertices, gates, vertices):
     new_indices = {}
@@ -683,7 +744,7 @@ def write_obj(path, active_vertices, gates, vertices):
             except KeyError:
                 continue
 
-def sew_conquest(gates, patches, active_vertices, valences, vertices):
+def sew_conquest(gates, patches, active_vertices, valences, vertices, faces , obja, count_face):
     for vertex in active_vertices.copy():
         if valences[vertex] == 2:
             try:
@@ -741,3 +802,4 @@ def sew_conquest(gates, patches, active_vertices, valences, vertices):
         new_right = new_left + 1
 
         # TODO: do something to treat the shared edges
+    return obja, count_face
