@@ -1,13 +1,55 @@
 import numpy as np
 import random
 
-def postprocessing(obja, vertices):
+def postprocessing(obja, vertices, obj_to_obja):
+    #create obja_face
+    obja_face = {}
     res = obja.split("\n")
-    for line in res:
-        if line[0] == 'v':
-            a = 1
-    return a
+    count_face = 0
+    for  line in res:
+        try:
+            if line[0] == 'f':
+                temp = list(map(int, line[2:].split(' ')))            
+                print(sorted(temp))
+                obja_face[tuple(sorted(temp))] = count_face+1
+                count_face += 1
+        except:
+            continue
+        
+    # Modifed df fonction in obja
+    for idx, line in enumerate(res.copy()):
+        try:
+            if line[0] == 'd':
+                temp = tuple(sorted(list(map(int, line[3:].split(' ')))))           
+                res[idx] = line.replace(line[3:], str(obja_face[temp]))
+        except:
+            res[idx] = ""
+            continue
+    
+    # Modifed face number
+    obja_to_obj = {v:k for k,v in obj_to_obja.items()}
+    for idx, line in enumerate(res.copy()):
+        try:
+            if line[0] == 'f':
+                temp = list(map(int, line[2:].split(' ')))        
+                res[idx] = line.replace(line[2:], f"{obja_to_obj[int(temp[0])]} {obja_to_obj[int(temp[1])]} {obja_to_obj[int(temp[2])]}")
+        except:
+            continue
+    return "\n".join(res)
 
+def update_obja(obja, obja_iter, count_v, count_v_iter, obj_to_obja, obj_to_obja_iter):
+            # Update obja
+        a = {}
+        for k in range(1,count_v_iter):
+            a[count_v - k] = obj_to_obja_iter[count_v_iter -k]
+        obj_to_obja.update(a)
+        count_v -= count_v_iter -1
+        obja = obja_iter + obja
+        obj_to_obja_iter = {}
+        obja_iter = ""
+        count_v_iter = 1
+        return obj_to_obja
+        
 def preprocessing(obj_path):
     # Variables
     faces = []
@@ -255,10 +297,10 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
                 plus_minus[new_front] = '+'
                 
         # Update obja
-        obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-        obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-        obja += f"f {front}  {chain[2]}  {chain[0]}\n"
-        obja += f"df {chain[0]}  {chain[1]}  {chain[2]}\n"
+        obja += f"f {front} {chain[0]} {chain[1]}\n"
+        obja += f"f {front} {chain[1]} {chain[2]}\n"
+        obja += f"f {front} {chain[2]} {chain[0]}\n"
+        obja += f"df {chain[0]} {chain[1]} {chain[2]}\n"
 
 
     elif valence == 4:
@@ -290,12 +332,12 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[1]][np.where(patches[chain[1]] == front)[0]] = left
             
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[0]}\n"
-            obja += f"df {left}  {chain[1]}  {chain[2]}\n"
-            obja += f"df {left}  {chain[1]}  {right}\n"
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[0]}\n"
+            obja += f"df {left} {chain[1]} {chain[2]}\n"
+            obja += f"df {left} {chain[1]} {right}\n"
 
         else:
             # Update the signs
@@ -325,12 +367,12 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[chain[2]][np.where(patches[chain[2]] == front)[0]] = right
 
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[0]}\n"
-            obja += f"df {right}  {chain[2]}  {left}\n"
-            obja += f"df {chain[2]}  {right}  {chain[1]}\n"
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[0]}\n"
+            obja += f"df {right} {chain[2]} {left}\n"
+            obja += f"df {chain[2]} {right} {chain[1]}\n"
 
     elif valence == 5:
         if right_sign == '-':
@@ -373,14 +415,14 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[left][np.where(patches[left] == front)[0]] = chain[1]
 
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[4]}\n"
-            obja += f"f {front}  {chain[4]}  {chain[0]}\n"
-            obja += f"df {left}  {right}  {chain[1]}\n"
-            obja += f"df {chain[1]}  {left}  {chain[3]}\n"
-            obja += f"df {chain[1]}  {chain[2]}  {chain[3]}\n"
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[4]}\n"
+            obja += f"f {front} {chain[4]} {chain[0]}\n"
+            obja += f"df {left} {right} {chain[1]}\n"
+            obja += f"df {chain[1]} {left} {chain[3]}\n"
+            obja += f"df {chain[1]} {chain[2]} {chain[3]}\n"
 
             
         elif left_sign == '-':
@@ -423,14 +465,14 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[left] = patches[left][patches[left] != front]
             
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[4]}\n"
-            obja += f"f {front}  {chain[4]}  {chain[0]}\n"
-            obja += f"df {left}  {right}  {chain[3]}\n"
-            obja += f"df {chain[1]}  {right}  {chain[3]}\n"
-            obja += f"df {chain[1]}  {chain[2]}  {chain[3]}\n"
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[4]}\n"
+            obja += f"f {front} {chain[4]} {chain[0]}\n"
+            obja += f"df {left} {right} {chain[3]}\n"
+            obja += f"df {chain[1]} {right} {chain[3]}\n"
+            obja += f"df {chain[1]} {chain[2]} {chain[3]}\n"
 
         else:
             # Update the signs
@@ -472,14 +514,14 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[left][np.where(patches[left] == front)[0]] = chain[2]
 
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[4]}\n"
-            obja += f"f {front}  {chain[4]}  {chain[0]}\n"
-            obja += f"df {left}  {right}  {chain[2]}\n"
-            obja += f"df {chain[1]}  {right}  {chain[2]}\n"
-            obja += f"df {left}  {chain[2]}  {chain[3]}\n"
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[4]}\n"
+            obja += f"f {front} {chain[4]} {chain[0]}\n"
+            obja += f"df {left} {right} {chain[2]}\n"
+            obja += f"df {chain[1]} {right} {chain[2]}\n"
+            obja += f"df {left} {chain[2]} {chain[3]}\n"
 
     elif valence == 6:
 
@@ -540,15 +582,15 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[left] = np.insert(patch, [i, i], [chain[1], chain[3]])
 
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[4]}\n"
-            obja += f"f {front}  {chain[4]}  {chain[5]}\n"
-            obja += f"f {front}  {chain[5]}  {chain[0]}\n"
-            obja += f"df {left}  {right}  {chain[1]}\n"
-            obja += f"df {chain[1]}  {left}  {chain[2]}\n"
-            obja += f"df {chain[1]}  {left}  {chain[2]}\n"            
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[4]}\n"
+            obja += f"f {front} {chain[4]} {chain[5]}\n"
+            obja += f"f {front} {chain[5]} {chain[0]}\n"
+            obja += f"df {left} {right} {chain[1]}\n"
+            obja += f"df {chain[1]} {chain[3]} {chain[2]}\n"
+            obja += f"df {chain[3]} {left} {chain[4]}\n"            
         else:
             # Update the signs
             if plus_minus.get(chain[1]) is None:
@@ -606,15 +648,15 @@ def retriangulation(chain, valences, left, right, gates, patches, front, plus_mi
             patches[left] = patches[left][patches[left] != front]
             
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[3]}\n"
-            obja += f"f {front}  {chain[3]}  {chain[4]}\n"
-            obja += f"f {front}  {chain[4]}  {chain[5]}\n"
-            obja += f"f {front}  {chain[5]}  {chain[0]}\n"
-            obja += f"df {chain[2]}  {right}  {chain[1]}\n"
-            obja += f"df {chain[2]}  {chain[3]}  {chain[4]}\n"
-            obja += f"df {chain[5]}  {left}  {right}\n"  
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[3]}\n"
+            obja += f"f {front} {chain[3]} {chain[4]}\n"
+            obja += f"f {front} {chain[4]} {chain[5]}\n"
+            obja += f"f {front} {chain[5]} {chain[0]}\n"
+            obja += f"df {chain[2]} {right} {chain[1]}\n"
+            obja += f"df {chain[2]} {chain[3]} {chain[4]}\n"
+            obja += f"df {chain[4]} {left} {right}\n"  
           
     return valences, patches, gates, vertices, faces , obja, count_v
 
@@ -701,10 +743,10 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo, vertices,
             fifo.append((chain[2], front_2))
             
             # Update obja
-            obja += f"f {front}  {chain[0]}  {chain[1]}\n"
-            obja += f"f {front}  {chain[1]}  {chain[2]}\n"
-            obja += f"f {front}  {chain[2]}  {chain[0]}\n"
-            obja += f"df {chain[0]}  {chain[1]}  {chain[2]}\n"
+            obja += f"f {front} {chain[0]} {chain[1]}\n"
+            obja += f"f {front} {chain[1]} {chain[2]}\n"
+            obja += f"f {front} {chain[2]} {chain[0]}\n"
+            #obja += f"df {chain[0]}  {chain[1]}  {chain[2]}\n"
  
 
         elif valences[front] <= 6 and vertices_status.get(front) is None:
@@ -760,7 +802,7 @@ def write_obj(active_vertices, gates, vertices, count_v, obj_to_obja):
                 print('\t\t WTF \t\t')
                 print('f: {}-{}-{}, th: {}, found: {}'.format(
                     front, left, right, right, local_copy[(front, left)]))
-            obj_f += f"f {new_indices[left]} {new_indices[right]} {new_indices[front]}\n"
+            obj_f += f"f {left} {right} {front}\n"
         except KeyError:
             continue
     return obj_f
@@ -780,6 +822,7 @@ def sew_conquest(gates, patches, active_vertices, valences, vertices, faces , ob
                 x, y, z = vertices[vertex-1]
                 obja += f"v {x} {y} {z}\n"
                 obj_to_obja[count_v] = vertex
+                obja += f"f {vertex} {chain[0]} {chain[1]}\n"
                 count_v += 1
                 
                 patch = patches[chain[0]]
@@ -802,6 +845,8 @@ def sew_conquest(gates, patches, active_vertices, valences, vertices, faces , ob
                     print(patch)
                     k = k[0]
                 gates[(chain[1], chain[0])] = int(patch[k-1])
+                obja += f"df {chain[0]}  {chain[1]}  {int(patch[k-1])}\n"
+
 
                 patch = patches[chain[1]]
                 k = np.where(patch == chain[0])[0]
@@ -809,6 +854,8 @@ def sew_conquest(gates, patches, active_vertices, valences, vertices, faces , ob
                     print(patch)
                     k = k[0]
                 gates[(chain[0], chain[1])] = int(patch[k-1])
+                obja += f"df {chain[0]}  {chain[1]}  {int(patch[k-1])}\n"
+
             except KeyError:
                 continue
 
