@@ -10,7 +10,6 @@ def postprocessing(obja, vertices, obj_to_obja):
         try:
             if line[0] == 'f':
                 temp = list(map(int, line[2:].split(' ')))            
-                print(sorted(temp))
                 obja_face[tuple(sorted(temp))] = count_face+1
                 count_face += 1
         except:
@@ -213,11 +212,9 @@ def decimating_conquest(gates, valences, patches, active_vertices, it, vertices,
 
         # conquered or null
         if faces_status.get(gate) is not None:
-            print('*', end='')
             continue
 
         elif valences[front] <= 6 and vertices_status.get(front) is None:
-            print('.', end='')
 
             # Retrieve the border of the patch
             chain = patches[front]
@@ -250,7 +247,6 @@ def decimating_conquest(gates, valences, patches, active_vertices, it, vertices,
 
         elif (vertices_status.get(front) is None and valences[front] > 6) or (
                 vertices_status.get(front) == 'conquered'):
-            print('o', end='')
 
             # Set the front face to null
             faces_status[gate] = 'null'
@@ -774,7 +770,7 @@ def cleaning_conquest(gates, patches, valences, active_vertices, fifo, vertices,
             fifo.append((left, front))
     return obja, count_v
 
-def write_obj(active_vertices, gates, vertices, count_v, obj_to_obja):
+def write_last_obja(active_vertices, gates, vertices, count_v, obj_to_obja):
     obj_f = ""
     new_indices = {}
     local_copy = gates.copy()
@@ -877,4 +873,32 @@ def sew_conquest(gates, patches, active_vertices, valences, vertices, faces , ob
         # TODO: do something to treat the shared edges
     return obja, count_v
 
-
+def write_obj(path, active_vertices, gates, vertices):
+    new_indices = {}
+    local_copy = gates.copy()
+    with open(path, 'w') as file:
+        for k, vertex in enumerate(active_vertices):
+            x, y, z = vertices[vertex-1]
+            file.write('v {} {} {}\n'.format(x, y, z))
+            new_indices[vertex] = k + 1
+        for gate in gates.copy():
+            left, right = gate
+            try:
+                front = local_copy[gate]
+                local_copy.pop(gate)
+                if local_copy[(right, front)] == left:
+                    local_copy.pop((right, front))
+                else:
+                    print('\t\t WTF \t\t')
+                    print('face: {}-{}-{}, th: {}, found: {}'.format(
+                        right, front, left, left, local_copy[(right, front)]))
+                if local_copy[(front, left)] == right:
+                    local_copy.pop((front, left))
+                else:
+                    print('\t\t WTF \t\t')
+                    print('f: {}-{}-{}, th: {}, found: {}'.format(
+                        front, left, right, right, local_copy[(front, left)]))
+                file.write('f {} {} {}\n'.format(
+                    new_indices[left], new_indices[right], new_indices[front]))
+            except KeyError:
+                continue

@@ -6,11 +6,11 @@ CSI Project.
 @author: Pierre Barroso + Fabio + Amar + Younes
 """
 from tools import (preprocessing, decimating_conquest, cleaning_conquest,
-                   sew_conquest, write_obj, postprocessing)
+                   sew_conquest, write_obj, postprocessing, write_last_obja)
 
 
 OBJ_PATH = './OBJ/icosphere.obj'
-NB_ITERATIONS = 8
+NB_ITERATIONS = 6
 obja = ""
 obj_to_obja = {}
 
@@ -68,18 +68,23 @@ for current_it in range(NB_ITERATIONS):
         obj_to_obja.update(a)
         count_v -= count_v_iter -1        
         obja = obja_iter + obja
+        
+        # create current obj
+        path = '{}_{}.obj'.format(OBJ_PATH.split('.obj')[0], current_it)
+        write_obj(path, active_vertices, gates, vertices)
 
     else:
         a = {}
         path = '{}_{}.obj'.format(OBJ_PATH.split('.obj')[0], current_it)
-        obj_f = write_obj(active_vertices, gates, vertices,  1, a)
+        write_obj(path, active_vertices, gates, vertices)
+        obj_f = write_last_obja(active_vertices, gates, vertices,  1, a)
         obj_to_obja.update(a)
         obja = obj_f + obja
         break
 
 # Postprocessing
 obja = postprocessing(obja, vertices, obj_to_obja)
-f = open("./OBJ/test.obja", "w")
+f = open(OBJ_PATH + "a", "w")
 f.write(obja)
 f.close()
 
