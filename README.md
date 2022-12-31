@@ -4,7 +4,7 @@ This is a Python code for progressive compression for lossless transmission of t
 ## Setup
 To use this code, you will need to modify the OBJ_PATH and NB_ITERATIONS variables in the script. OBJ_PATH should be the file path of the OBJ file that you want to transmit, and NB_ITERATIONS is the number of iterations that you want the compression algorithm to run.
 
-Once you have modified these variables, you can run the script by using the command `python lossless_transmission.py`.
+Once you have modified these variables, you can run the script by using the command `python main.py`.
 
 ## Output
 The script will output the compressed version of the OBJ file, which can then be transmitted and decompressed at the receiving end for lossless reconstruction of the original triangular mesh.
