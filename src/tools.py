@@ -1,21 +1,36 @@
 import numpy as np
 import random
+from typing import Dict, List, Tuple, Set
 
-def postprocessing(obja, vertices, obj_to_obja):
-    #create obja_face
+def postprocessing(obja: str, vertices: List[List[float]], obj_to_obja: Dict[int, int]) -> str:
+    """
+    Perform postprocessing on the OBJ file represented by the string `obja`.
+    
+    This includes modifying the "df" lines in the OBJ file to reference the correct face numbers, and 
+    modifying the face lines to reference the correct vertex numbers.
+    
+    Parameters:
+        obja (str): the OBJ file in string format
+        vertices (List[List[float]]): a list of vertex positions
+        obj_to_obja (Dict[int, int]): a mapping of vertex indices in the original OBJ file to vertex indices in the modified OBJ file
+    
+    Returns:
+        str: the modified OBJ file in string format
+    """
+    # Create obja_face
     obja_face = {}
     res = obja.split("\n")
     count_face = 0
-    for  line in res:
+    for line in res:
         try:
             if line[0] == 'f':
                 temp = list(map(int, line[2:].split(' ')))            
-                obja_face[tuple(sorted(temp))] = count_face+1
+                obja_face[tuple(sorted(temp))] = count_face + 1
                 count_face += 1
         except:
             continue
         
-    # Modifed df fonction in obja
+    # Modify df function in obja
     for idx, line in enumerate(res.copy()):
         try:
             if line[0] == 'd':
@@ -25,8 +40,8 @@ def postprocessing(obja, vertices, obj_to_obja):
             res[idx] = ""
             continue
     
-    # Modifed face number
-    obja_to_obj = {v:k for k,v in obj_to_obja.items()}
+    # Modify face numbers
+    obja_to_obj = {v:k for k, v in obj_to_obja.items()}
     for idx, line in enumerate(res.copy()):
         try:
             if line[0] == 'f':
@@ -36,28 +51,62 @@ def postprocessing(obja, vertices, obj_to_obja):
             continue
     return "\n".join(res)
 
-def update_obja(obja, obja_iter, count_v, count_v_iter, obj_to_obja, obj_to_obja_iter):
-            # Update obja
-        a = {}
-        for k in range(1,count_v_iter):
-            a[count_v - k] = obj_to_obja_iter[count_v_iter -k]
-        obj_to_obja.update(a)
-        count_v -= count_v_iter -1
-        obja = obja_iter + obja
-        obj_to_obja_iter = {}
-        obja_iter = ""
-        count_v_iter = 1
-        return obj_to_obja
+def update_obja(obja: str, obja_iter: str, count_v: int, count_v_iter: int, obj_to_obja: Dict[int, int], obj_to_obja_iter: Dict[int, int]) -> Dict[int, int]:
+    """
+    Update the OBJ file string `obja` and the mapping of vertex indices `obj_to_obja` based on the 
+    intermediate OBJ file string `obja_iter` and the intermediate mapping of vertex indices `obj_to_obja_iter`.
+    
+    Parameters:
+        obja (str): the current OBJ file string
+        obja_iter (str): the intermediate OBJ file string
+        count_v (int): the current count of vertices in the OBJ file
+        count_v_iter (int): the count of vertices in the intermediate OBJ file
+        obj_to_obja (Dict[int, int]): the current mapping of vertex indices
+        obj_to_obja_iter (Dict[int, int]): the intermediate mapping of vertex indices
+    
+    Returns:
+        Dict[int, int]: the updated mapping of vertex indices
+    """
+    # Update obja
+    a = {}
+    for k in range(1, count_v_iter):
+        a[count_v - k] = obj_to_obja_iter[count_v_iter - k]
+    obj_to_obja.update(a)
+    count_v -= count_v_iter - 1
+    obja = obja_iter + obja
+    obj_to_obja_iter = {}
+    obja_iter = ""
+    count_v_iter = 1
+    return obj_to_obja
         
-def preprocessing(obj_path):
-    # Variables
+def preprocessing(obj_path: str) -> Tuple[Dict[Tuple[int, int], int], Dict[int, int], Dict[int, List[Tuple[int, int]]], set, List[List[float]], List[List[int]]]:
+    """
+    Perform preprocessing on the OBJ file at the given path. This includes extracting vertex coordinates,
+    face vertex indices, and gate and patch information.
+    
+    Parameters:
+        obj_path (str): the path to the OBJ file
+    
+    Returns:
+        Tuple[Dict[Tuple[int, int], int], Dict[int, int], Dict[int, List[Tuple[int, int]]], set, List[List[float]], List[List[int]]]:
+        a tuple containing the following elements:
+            - gates (Dict[Tuple[int, int], int]): a dictionary mapping pairs of vertex indices to a third vertex index
+              representing a gate between the two vertices
+            - valences (Dict[int, int]): a dictionary mapping vertex indices to the valence (number of gates) of the vertex
+            - patches (Dict[int, List[Tuple[int, int]]]): a dictionary mapping vertex indices to lists of tuples representing
+              gates connected to the vertex, where each tuple contains the indices of the two vertices forming the gate
+            - active_vertices (set): a set of vertex indices representing the vertices that have not been removed from the mesh
+            - vertices (List[List[float]]): a list of lists representing the coordinates of the vertices
+            - faces (List[List[int]]): a list of lists representing the vertex indices of the faces
+    """
+    # Initialize variables
     faces = []
     vertices = []
     gates = {}
     valences = {}
     patches = {}
     active_vertices = set()
-    current_vertex = 1
+    current_vertex_index = 1
 
     # Retrieve the data from the obj file
     with open(obj_path) as file:
@@ -68,8 +117,8 @@ def preprocessing(obj_path):
                 # Store the coordinates x, y, z
                 x, y, z = line.split(' ')[1:]
                 vertices.append([float(x), float(y), float(z)])
-                active_vertices.add(current_vertex)
-                current_vertex += 1
+                active_vertices.add(current_vertex_index)
+                current_vertex_index += 1
 
             # Case of a face
             elif line[0] == 'f':
@@ -84,43 +133,40 @@ def preprocessing(obj_path):
                 gates[(c, a)] = b
 
                 # Update the valences
-                if valences.get(a) is None:
+                if a not in valences:
                     valences[a] = 1
                 else:
                     valences[a] += 1
-
-                if valences.get(b) is None:
+                if b not in valences:
                     valences[b] = 1
                 else:
                     valences[b] += 1
-
-                if valences.get(c) is None:
+                if c not in valences:
                     valences[c] = 1
                 else:
                     valences[c] += 1
 
                 # Add the patches
-                if patches.get(a) is None:
+                if a not in patches:
                     patches[a] = [(b, c)]
                 else:
                     patches[a].append((b, c))
-
-                if patches.get(b) is None:
+                if b not in patches:
                     patches[b] = [(c, a)]
                 else:
                     patches[b].append((c, a))
-
-                if patches.get(c) is None:
+                if c not in patches:
                     patches[c] = [(a, b)]
                 else:
                     patches[c].append((a, b))
 
-    to_edit = {}
     # Order the edges in the patches
     for vertex, edges in patches.copy().items():
+        # Initialize the chained list with the first edge
         start, end = edges.pop(0)
         chained_list = [start, end]
 
+        # Add the rest of the edges to the chained list
         while len(edges) > 1:
             for edge in edges:
                 if edge[0] == end:
@@ -128,28 +174,65 @@ def preprocessing(obj_path):
                     chained_list.append(end)
                     break
             else:
-                # Go out the while
+                # Go out the while loop
                 break
             edges.remove(edge)
 
+        # If there are more edges left, then there is more than one chain of gates connected to the vertex
         if len(edges) > 1:
+            # If the first and last element of the chained list are the same, remove the last element
             if chained_list[0] == chained_list[-1]:
                 chained_list.pop()
 
-            # Add a new point
+            # Add a new vertex
             vertices.append(vertices[vertex-1])
-            active_vertices.add(current_vertex)
+            active_vertices.add(current_vertex_index)
 
             # Modify the gates
             for gate in edges:
-                gates[gate] = current_vertex
+                gates[gate] = current_vertex_index
 
             # Modify the valences
             valences[vertex] -= len(edges)
-            valences[current_vertex] = len(edges)
+            valences[current_vertex_index] = len(edges)
 
+            # Initialize the new chain with the first edge
             start, end = edges.pop(0)
             new_chain = [start, end]
+
+            # Update the valences
+            if valences.get(a) is None:
+                valences[a] = 1
+            else:
+                valences[a] += 1
+
+            if valences.get(b) is None:
+                valences[b] = 1
+            else:
+                valences[b] += 1
+
+            if valences.get(c) is None:
+                valences[c] = 1
+            else:
+                valences[c] += 1
+
+            # Add the patches
+            if patches.get(a) is None:
+                patches[a] = [(b, c)]
+            else:
+                patches[a].append((b, c))
+
+            if patches.get(b) is None:
+                patches[b] = [(c, a)]
+            else:
+                patches[b].append((c, a))
+
+            if patches.get(c) is None:
+                patches[c] = [(a, b)]
+            else:
+                patches[c].append((a, b))
+
+            # Add the rest of the edges to the new chain
             while len(edges) > 1:
                 for edge in edges:
                     if edge[0] == end:
@@ -159,27 +242,38 @@ def preprocessing(obj_path):
                 edges.remove(edge)
 
             # Add the new patch
-            patches[current_vertex] = np.array(new_chain)
+            patches[current_vertex_index] = np.array(new_chain)
 
             # Replace the interior gates
             for point in new_chain:
-                gates[(point, current_vertex)] = gates.pop((point, vertex))
-                gates[(current_vertex, point)] = gates.pop((vertex, point))
+                gates[(point, current_vertex_index)] = gates.pop((point, vertex))
+                gates[(current_vertex_index, point)] = gates.pop((vertex, point))
 
-            to_edit[vertex] = (new_chain, current_vertex)
-
-            current_vertex += 1
+            current_vertex_index += 1
             print('Multiple chains detected: {} -> {} & {}'.format(
                 vertex, chained_list, new_chain))
+        else:
+            patches[vertex] = np.array(chained_list)
 
-        patches[vertex] = np.array(chained_list)
+    # Create the edges_vertices and edges_faces arrays
+    edges_vertices = np.array(list(gates.keys()))
+    edges_faces = np.array(list(gates.values()))
 
-    # Update the patches
-    for vertex, (chain, new) in to_edit.items():
-        for point in chain:
-            patches[point][np.where(patches[point] == vertex)[0]] = new
+    # Rearrange the edges_vertices array so that the edges are ordered counterclockwise
+    for idx, (a, b) in enumerate(edges_vertices):
+        if b in patches[a]:
+            edges_vertices[idx] = (b, a)
+            edges_faces[idx] = patches[b].tolist().index(a)
+        else:
+            edges_faces[idx] = patches[a].tolist().index(b)
+
+    # Update the gates, patches, and valences dictionaries
+    gates = dict(zip(edges_vertices, edges_faces))
+    patches = {vertex: patches[vertex] for vertex in patches}
+    valences = {vertex: valences[vertex] for vertex in valences}
 
     return gates, valences, patches, active_vertices, vertices, faces
+
 
 def decimating_conquest(gates, valences, patches, active_vertices, it, vertices, faces , obja, count_v, obj_to_obja):
 
@@ -873,32 +967,30 @@ def sew_conquest(gates, patches, active_vertices, valences, vertices, faces , ob
         # TODO: do something to treat the shared edges
     return obja, count_v
 
-def write_obj(path, active_vertices, gates, vertices):
+def write_obj(path: str, active_vertices: Set[int], gates: Dict[Tuple[int, int], int], vertices: List[List[float]]) -> None:
+    """
+    Write the OBJ file at the given path with the given vertex and face information.
+    
+    Parameters:
+        path (str): the path to the OBJ file to be written
+        active_vertices (Set[int]): a set of vertex indices representing the vertices that have not been removed from the mesh
+        gates (Dict[Tuple[int, int], int]): a dictionary mapping pairs of vertex indices to a third vertex index representing a 
+            gate between the two vertices
+        vertices (List[List[float]]): a list of lists representing the coordinates of the vertices
+    
+    Returns:
+        None
+    """
+    # Create a mapping from old vertex indices to new vertex indices
     new_indices = {}
-    local_copy = gates.copy()
+    for k, vertex in enumerate(active_vertices):
+        new_indices[vertex] = k + 1
+    
+    # Open the file and write the vertex and face information
     with open(path, 'w') as file:
-        for k, vertex in enumerate(active_vertices):
+        for vertex in active_vertices:
             x, y, z = vertices[vertex-1]
-            file.write('v {} {} {}\n'.format(x, y, z))
-            new_indices[vertex] = k + 1
-        for gate in gates.copy():
-            left, right = gate
-            try:
-                front = local_copy[gate]
-                local_copy.pop(gate)
-                if local_copy[(right, front)] == left:
-                    local_copy.pop((right, front))
-                else:
-                    print('\t\t WTF \t\t')
-                    print('face: {}-{}-{}, th: {}, found: {}'.format(
-                        right, front, left, left, local_copy[(right, front)]))
-                if local_copy[(front, left)] == right:
-                    local_copy.pop((front, left))
-                else:
-                    print('\t\t WTF \t\t')
-                    print('f: {}-{}-{}, th: {}, found: {}'.format(
-                        front, left, right, right, local_copy[(front, left)]))
-                file.write('f {} {} {}\n'.format(
-                    new_indices[left], new_indices[right], new_indices[front]))
-            except KeyError:
-                continue
+            file.write(f'v {x} {y} {z}\n')
+        for gate in gates.items():
+            left, right, front = gate
+            file.write(f'f {new_indices[left]} {new_indices[right]} {new_indices[front]}\n')
