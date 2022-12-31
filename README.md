@@ -1,9 +1,10 @@
-# Projet_CSI
+# Lossless 3D Streaming
+This is a Python code for progressive compression for lossless transmission of triangular meshes. It is based on the paper by Alliez and Desbrun titled "Progressive Compression for Lossless Transmission of Triangle Meshes" which was presented at the 28th annual conference on Computer Graphics and Interactive Techniques in 2001.
 
-implementaiton du papier 
-Alliez et al., Progressive Compression for Lossless Transmission of Triangle Meshes, SIGGRAPH 2001
+## Setup
+To use this code, you will need to modify the OBJ_PATH and NB_ITERATIONS variables in the script. OBJ_PATH should be the file path of the OBJ file that you want to transmit, and NB_ITERATIONS is the number of iterations that you want the compression algorithm to run.
 
-# Initiation 
+Once you have modified these variables, you can run the script by using the command `python lossless_transmission.py`.
 
-Modifier OBJ_PATH et NB_ITERATIONS et run le script lossless_transmission
-
+##Output
+The script will output the compressed version of the OBJ file, which can then be transmitted and decompressed at the receiving end for lossless reconstruction of the original triangular mesh.
