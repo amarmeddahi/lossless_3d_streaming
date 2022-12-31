@@ -6,5 +6,5 @@ To use this code, you will need to modify the OBJ_PATH and NB_ITERATIONS variabl
 
 Once you have modified these variables, you can run the script by using the command `python lossless_transmission.py`.
 
-##Output
+# Output
 The script will output the compressed version of the OBJ file, which can then be transmitted and decompressed at the receiving end for lossless reconstruction of the original triangular mesh.
